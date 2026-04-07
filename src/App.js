@@ -1,10 +1,11 @@
-import MultiStepForm from "./MultistepForm/MultistepForm";
+import Typeahead from "./autocomplete/Typeahead";
+import InfiniteScroll from "./InfiniteScroll";
 
 function App() {
 
   return (
     <div style={{ display: "flex" }}>
-      <MultiStepForm />
+      <InfiniteScroll />
     </div>
   );
 }

@@ -1,40 +1,44 @@
-import { useEffect, useState, useRef } from "react"
+import { useEffect, useState, useRef } from "react";
 import useDebounce from "./useDebounce";
 
-export default function Typeahead() {
+const Typeahead = () => {
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0)
 
   const skipFetch = useRef(null);
 
-  const handleSelect = (name) => {
+  const handleOnChange = (e) => {
+    setQuery(e.target.value)
+  }
+
+  const debouncedQuery = useDebounce(query, 300);
+
+  const handleSelect = (item) => {
     skipFetch.current = true;
-    setQuery(name)
+    setQuery(item)
     setSuggestions([])
   }
 
-  const debouncedQuery = useDebounce(query, 3000);
-
   useEffect(() => {
+
     if (skipFetch.current) {
       skipFetch.current = false;
-      return
+      return;
     }
-    
+
     if (!debouncedQuery.trim()) {
       setSuggestions([]);
       return;
     }
 
-    const fetchSuggestion = async () => {
-      setLoading(true);
-
+    const fetchSuggestions = async () => {
+      setLoading(true)
       try {
-        const res = await fetch(`https://restcountries.com/v3.1/name/${debouncedQuery}`)
-        if (!res.ok) throw new Error("No Results");
+        const res = await fetch(`https://dummyjson.com/products/search?q=${debouncedQuery}&limit=5`);
         const data = await res.json();
-        setSuggestions(data.map((c) => c.name.common))
+        setSuggestions(data.products.map((p) => p.title));
       } catch (err) {
         console.log(err.message)
       } finally {
@@ -42,36 +46,42 @@ export default function Typeahead() {
       }
     }
 
-    fetchSuggestion();
+    fetchSuggestions()
   }, [debouncedQuery])
 
+  const handleKeyDown = (e) => {
+    if (suggestions.length === 0) return;
+    if (e.key === "ArrowDown") {
+      setActiveIndex((prev) => Math.min(prev + 1, suggestions.length - 1))
+    }
+    if (e.key === "ArrowUp") {
+      setActiveIndex((prev) => Math.max(prev - 1, 0))
+    }
+
+    if (e.key === "Enter" && activeIndex >= 0) {
+      handleSelect(suggestions[activeIndex])
+    }
+  }
+  
   return (
     <div>
-      <input type="text" value={query} onChange={(e) => setQuery(e.target.value)} />
-      {loading && <p>Loading</p>}
-
-      {!loading && debouncedQuery && suggestions.length === 0 && (
-        <p>No Result Found</p>
-      )}
-
+      <input value={query} onChange={(e) => handleOnChange(e)} onKeyDown={handleKeyDown} />
+      {loading && <p>Loading...</p>}
+      {!loading && debouncedQuery && suggestions.length === 0 && <p>No result</p>}
       {suggestions.length > 0 && (
-        <ul style={{
-          position: "absolute",
-          width: "100%",
-          border: "1px solid #ccc",
-          listStyle: "none",
-          margin: "0",
-          padding: "0",
-          background: "#fff"
-        }}>
-          {suggestions.map((name) => (
-            <li style={{padding: "8px", cursor: "pointer"}} key={name} onClick={() => handleSelect(name)}>
-              {name}
+        <>
+          <ul>
+            {suggestions.map((item, index) => (
+            <li style={{border: activeIndex === index && "1px solid blue"}} key={item} onClick={() => handleSelect(item)}>
+              {item}
             </li>
           ))}
-        </ul>
+          </ul>
+          
+        </>
       )}
-
     </div>
   )
 }
+
+export default Typeahead;
